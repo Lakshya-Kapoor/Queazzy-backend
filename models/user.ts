@@ -13,6 +13,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  created_quizzes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Quiz",
+    },
+  ],
 });
 
 const User = mongoose.model("User", userSchema);
