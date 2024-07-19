@@ -1,9 +1,5 @@
 import mongoose from "mongoose";
 
-const optionSchema = new mongoose.Schema({
-  text: { type: String, required: true },
-});
-
 const questionSchema = new mongoose.Schema({
   track: { type: String },
 
@@ -25,7 +21,7 @@ const questionSchema = new mongoose.Schema({
 
   answer: { type: String, required: true },
 
-  options: [optionSchema],
+  options: [{ text: { type: String, required: true } }],
 });
 
 const quizSchema = new mongoose.Schema({

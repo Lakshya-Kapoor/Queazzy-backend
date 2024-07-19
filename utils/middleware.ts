@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { customError } from "./errorClass";
 import User from "../models/user";
+import Quiz from "../models/quiz";
 
 dotenv.config();
 
@@ -33,26 +34,44 @@ export const isQuizCreator = async (
   res: Response,
   next: NextFunction
 ) => {
-  try {
-    const user_id = req.user.id;
-    const { quiz_id } = req.params;
+  const user_id = req.user.id;
+  const { quiz_id } = req.params;
 
-    const result = await User.find({
-      _id: user_id,
-      created_quizzes: { $in: [quiz_id] },
-    });
+  const result = await User.find({
+    _id: user_id,
+    created_quizzes: { $in: [quiz_id] },
+  });
 
-    if (result.length == 0) {
-      throw new customError(
-        401,
-        "You don't have authorization to change this quiz"
-      );
-    }
-
-    next();
-  } catch (err) {
-    next(err);
+  if (result.length == 0) {
+    throw new customError(
+      401,
+      "You don't have authorization to view / edit this quiz"
+    );
   }
+
+  next();
+};
+
+export const questionExistsInQuiz = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { quiz_id, question_id } = req.params;
+
+  const result = await Quiz.findOne({
+    _id: quiz_id,
+    questions: { $elemMatch: { _id: question_id } },
+  });
+
+  if (!result) {
+    throw new customError(
+      404,
+      `Question with id: ${question_id} doesn't exist`
+    );
+  }
+
+  next();
 };
 
 export const errorHandler = (

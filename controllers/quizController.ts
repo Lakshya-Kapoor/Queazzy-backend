@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import User from "../models/user";
 import Quiz from "../models/quiz";
+import { customError } from "../utils/errorClass";
 
 export const createQuiz = async (req: Request, res: Response) => {
   const { title, max_members, max_teams } = req.body;
@@ -31,19 +32,16 @@ export const getQuizzes = async (req: Request, res: Response) => {
   res.json(quizzes!.created_quizzes);
 };
 
-export const addQuestion = async (req: Request, res: Response) => {
+export const getQuiz = async (req: Request, res: Response) => {
   const { quiz_id } = req.params;
-  const { question, options } = req.body;
 
-  const questionToAdd = { ...question, options };
+  const quiz = await Quiz.findById(quiz_id);
 
-  const newQuestion = await Quiz.findByIdAndUpdate(quiz_id, {
-    $push: { questions: questionToAdd },
-  });
+  if (!quiz) {
+    throw new customError(404, "Quiz doesn't exist");
+  }
 
-  console.log(newQuestion);
-
-  res.json({ success: "Added question" });
+  res.json(quiz);
 };
 
 export const deleteQuiz = async (req: Request, res: Response) => {
@@ -59,4 +57,47 @@ export const deleteQuiz = async (req: Request, res: Response) => {
   await Quiz.findByIdAndDelete(quiz_id);
 
   res.json({ success: `Deleted quiz with id: ${quiz_id}` });
+};
+
+export const addQuestion = async (req: Request, res: Response) => {
+  const { quiz_id } = req.params;
+  const { question, options } = req.body;
+
+  const questionToAdd = { ...question, options };
+
+  await Quiz.findByIdAndUpdate(quiz_id, {
+    $push: { questions: questionToAdd },
+  });
+
+  res.json({ success: "Added question" });
+};
+
+export const deleteQuestion = async (req: Request, res: Response) => {
+  const { quiz_id, question_id } = req.params;
+  const { question, options } = req.body;
+
+  await Quiz.findByIdAndUpdate(quiz_id, {
+    $pull: { questions: { _id: question_id } },
+  });
+
+  res.json({ success: "Deleted question" });
+};
+
+export const editQuestion = async (req: Request, res: Response) => {
+  const { quiz_id, question_id } = req.params;
+  const { question, options } = req.body;
+
+  // Deleting old question
+  await Quiz.findByIdAndUpdate(quiz_id, {
+    $pull: { questions: { _id: question_id } },
+  });
+
+  // Adding edited question
+  const questionToAdd = { ...question, options };
+
+  await Quiz.findByIdAndUpdate(quiz_id, {
+    $push: { questions: questionToAdd },
+  });
+
+  res.json({ success: "Edited question" });
 };
