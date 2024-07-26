@@ -4,6 +4,7 @@ import {
   isAuthenticated,
   isQuizCreator,
   questionExistsInQuiz,
+  reqBodyValidation,
 } from "../utils/middleware";
 import catchAsync from "../utils/catchAsync";
 import {
@@ -15,9 +16,15 @@ import {
   getQuiz,
   getQuizzes,
 } from "../controllers/quizController";
+import { quizCreateSchema } from "../utils/requestSchemas";
 
 /* Create quiz */
-router.post("/", isAuthenticated, catchAsync(createQuiz));
+router.post(
+  "/",
+  isAuthenticated,
+  reqBodyValidation(quizCreateSchema),
+  catchAsync(createQuiz)
+);
 
 /* Get all quizzes of user */
 router.get("/", isAuthenticated, catchAsync(getQuizzes));

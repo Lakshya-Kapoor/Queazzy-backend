@@ -24,12 +24,25 @@ export const createQuiz = async (req: Request, res: Response) => {
 export const getQuizzes = async (req: Request, res: Response) => {
   const user_id = req.user.id;
 
-  const quizzes = await User.findById(user_id, {
+  const quiz_ids = await User.findById(user_id, {
     created_quizzes: 1,
     _id: 0,
-  }).populate("created_quizzes", "title");
+  });
 
-  res.json(quizzes!.created_quizzes);
+  let quizzes: any[] = [];
+  for (let quiz_id of quiz_ids!.created_quizzes) {
+    const { title, _id, max_members, max_teams, questions, created_at }: any =
+      await Quiz.findById(quiz_id);
+    quizzes.push({
+      _id,
+      title,
+      max_members,
+      max_teams,
+      created_at,
+      questions: questions.length,
+    });
+  }
+  res.json(quizzes);
 };
 
 export const getQuiz = async (req: Request, res: Response) => {
@@ -61,9 +74,9 @@ export const deleteQuiz = async (req: Request, res: Response) => {
 
 export const addQuestion = async (req: Request, res: Response) => {
   const { quiz_id } = req.params;
-  const { question, options } = req.body;
+  const { question } = req.body;
 
-  const questionToAdd = { ...question, options };
+  const questionToAdd = { ...question };
 
   await Quiz.findByIdAndUpdate(quiz_id, {
     $push: { questions: questionToAdd },
@@ -74,7 +87,6 @@ export const addQuestion = async (req: Request, res: Response) => {
 
 export const deleteQuestion = async (req: Request, res: Response) => {
   const { quiz_id, question_id } = req.params;
-  const { question, options } = req.body;
 
   await Quiz.findByIdAndUpdate(quiz_id, {
     $pull: { questions: { _id: question_id } },
@@ -85,19 +97,14 @@ export const deleteQuestion = async (req: Request, res: Response) => {
 
 export const editQuestion = async (req: Request, res: Response) => {
   const { quiz_id, question_id } = req.params;
-  const { question, options } = req.body;
+  const { question } = req.body;
 
-  // Deleting old question
-  await Quiz.findByIdAndUpdate(quiz_id, {
-    $pull: { questions: { _id: question_id } },
-  });
+  console.log(question);
 
-  // Adding edited question
-  const questionToAdd = { ...question, options };
-
-  await Quiz.findByIdAndUpdate(quiz_id, {
-    $push: { questions: questionToAdd },
-  });
+  const quiz = await Quiz.findById(quiz_id);
+  const questionData = quiz?.questions.id(question_id);
+  Object.assign(questionData!, { ...question });
+  await quiz?.save();
 
   res.json({ success: "Edited question" });
 };

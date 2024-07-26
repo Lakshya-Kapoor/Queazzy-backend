@@ -31,7 +31,7 @@ export const logInUser = async (req: Request, res: Response) => {
 
   const user = await User.findOne({ phone_no });
   if (!user) {
-    throw new customError(400, "User doesn't exist");
+    throw new customError(400, "Phone number doesn't exist");
   }
   if (!(await bcrypt.compare(password, user.password))) {
     throw new customError(401, "Incorrect password");

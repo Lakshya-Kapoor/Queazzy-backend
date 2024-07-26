@@ -4,8 +4,23 @@ import dotenv from "dotenv";
 import { customError } from "./errorClass";
 import User from "../models/user";
 import Quiz from "../models/quiz";
+import Joi from "joi";
 
 dotenv.config();
+
+export function reqBodyValidation(schema: Joi.ObjectSchema<any>) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      next(
+        new customError(400, `Invalid req body: ${error.details[0].message}`)
+      );
+    } else {
+      req.body = value;
+      next();
+    }
+  };
+}
 
 export const isAuthenticated = (
   req: Request,
@@ -82,9 +97,9 @@ export const errorHandler = (
 ) => {
   if (err instanceof customError) {
     const { status, errorMsg } = err;
-    res.status(status).json({ error: errorMsg });
+    res.status(status).json({ errorMsg });
   } else {
     console.log(err.message);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ errorMsg: "Internal server error" });
   }
 };

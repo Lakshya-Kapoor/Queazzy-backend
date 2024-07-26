@@ -12,16 +12,18 @@ const questionSchema = new mongoose.Schema({
   time_limit: {
     type: String,
     default: "30s",
-    enum: ["20s", "30s", "45s", "1m"],
+    enum: ["10s", "20s", "30s", "45s", "60s"],
   },
 
   points: { type: Number, default: 1 },
 
   question: { type: String, required: true },
 
-  answer: { type: String, required: true },
+  answer: { type: String, default: "" },
 
-  options: [{ text: { type: String, required: true } }],
+  correct_option: { type: Number, default: -1 },
+
+  options: { type: [String], default: ["", ""] },
 });
 
 const quizSchema = new mongoose.Schema({
@@ -30,6 +32,8 @@ const quizSchema = new mongoose.Schema({
   max_teams: { type: Number, required: true },
 
   max_members: { type: Number, required: true },
+
+  created_at: { type: Date, default: Date.now },
 
   questions: [questionSchema],
 });

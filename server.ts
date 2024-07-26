@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { errorHandler } from "./utils/middleware";
 import quizRouter from "./routes/quizRouter";
 import userRouter from "./routes/userRouter";
+import cors from "cors";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ main()
   .catch((err) => console.log(err));
 
 /* Middlewares */
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
