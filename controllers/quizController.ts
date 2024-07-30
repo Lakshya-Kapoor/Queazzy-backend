@@ -99,8 +99,6 @@ export const editQuestion = async (req: Request, res: Response) => {
   const { quiz_id, question_id } = req.params;
   const { question } = req.body;
 
-  console.log(question);
-
   const quiz = await Quiz.findById(quiz_id);
   const questionData = quiz?.questions.id(question_id);
   Object.assign(questionData!, { ...question });
