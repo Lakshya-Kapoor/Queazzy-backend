@@ -35,7 +35,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+/* Routes */
 app.use("/user", userRouter);
 app.use("/quiz", quizRouter);
 
@@ -43,7 +43,7 @@ app.use("/quiz", quizRouter);
 app.use(errorHandler);
 
 server.listen(PORT, () => {
-  console.log(`Http server is listening on port: ${PORT}`);
+  console.log(`Http server is listening on PORT: ${PORT}`);
 });
 
 wss.on("connection", (ws: ExtWebSocket) => {

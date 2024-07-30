@@ -1,4 +1,5 @@
 import Room from "../models/room";
+import User from "../models/user";
 
 export async function addNewPlayer(
   room_id: string,
@@ -33,4 +34,19 @@ export async function playerInRoom(room_id: string, player_id: string) {
   );
 
   return res;
+}
+
+export async function findRoom(room_id: string) {
+  return await Room.findOne({ room_id: room_id });
+}
+
+export async function isRoomOwner(client_id: string, room_id: string) {
+  return await User.findOne({
+    _id: client_id,
+    created_quizzes: { $in: [room_id] },
+  });
+}
+
+export async function startQuiz(room_id: string) {
+  await Room.findOneAndUpdate({ room_id: room_id }, { quiz_status: "started" });
 }

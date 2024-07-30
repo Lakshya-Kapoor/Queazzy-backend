@@ -1,10 +1,16 @@
 import { ExtWebSocket } from "../types/cutomTypes";
 import jwt from "jsonwebtoken";
 import json, { errorMsg } from "../utils/jsonFunctions";
-import { addNewPlayer, playerInRoom } from "../utils/dbFunctions";
+import {
+  addNewPlayer,
+  findRoom,
+  isRoomOwner,
+  playerInRoom,
+  startQuiz,
+} from "../utils/dbFunctions";
 import Room from "../models/room";
 import User from "../models/user";
-import { broadcastRoom } from "../utils/broadCastUtils";
+import { broadCastQuizStarted, broadcastRoom } from "../utils/broadCastUtils";
 
 const handleMessage = async (wss: any, ws: ExtWebSocket, message: string) => {
   try {
@@ -21,71 +27,19 @@ const handleMessage = async (wss: any, ws: ExtWebSocket, message: string) => {
         break;
       }
       case "init": {
-        const { token, role } = parsedMessage;
-        jwt.verify(token, process.env.TOKEN!, (err: any, user: any) => {
-          if (err) {
-            ws.send(errorMsg("Invalid JWT token"));
-          } else {
-            ws.client_id = user.id;
-            ws.user_name = user.user_name;
-            ws.room_id = null;
-            ws.role = role;
-            ws.send(json({ type: "init-success" }));
-          }
-        });
+        handleInit(ws, parsedMessage);
         break;
       }
       case "create-room": {
-        const { room_id }: { room_id: string } = parsedMessage;
-        // Check if client is quiz owner
-        const isOwner = await User.find({
-          _id: ws.client_id,
-          created_quizzes: { $in: [room_id] },
-        });
-        // Find if room exists
-        const room = await Room.find({ room_id: room_id });
-
-        // Not quiz owner
-        if (isOwner.length == 0) {
-          ws.send(errorMsg("You can't start the quiz"));
-        }
-        // Room doesn't exist
-        else if (room.length == 0) {
-          const newRoom = new Room({
-            room_id: room_id,
-            owner: ws.client_id,
-            quiz_status: "published",
-          });
-          await newRoom.save();
-          ws.room_id = room_id;
-        }
-        // Room already exists
-        else {
-          ws.room_id = room_id;
-          broadcastRoom(wss, room_id);
-        }
+        handleCreateRoom(wss, ws, parsedMessage);
         break;
       }
       case "join-room": {
-        const { room_id }: { room_id: string } = parsedMessage;
-        // Find if room exists
-        const room = await Room.findOne({ room_id: room_id });
-        // Room doesn't exist
-        if (!room) {
-          ws.send(errorMsg("Invalid room_id"));
-        } else if (room.quiz_status == "published") {
-          await addNewPlayer(room_id, ws.client_id!, ws.user_name!);
-          ws.room_id = room_id;
-          await broadcastRoom(wss, room_id);
-        } else if (room.quiz_status == "started") {
-          if (await playerInRoom(room_id, ws.client_id!)) {
-            ws.room_id = room_id;
-          } else {
-            ws.send(errorMsg("Can't join, quiz started"));
-          }
-        } else {
-          ws.send(errorMsg("Can't join, quiz ended"));
-        }
+        handleJoinRoom(wss, ws, parsedMessage);
+        break;
+      }
+      case "start-quiz": {
+        handleStartQuiz(wss, ws);
         break;
       }
     }
@@ -95,3 +49,82 @@ const handleMessage = async (wss: any, ws: ExtWebSocket, message: string) => {
 };
 
 export default handleMessage;
+
+function handleInit(ws: ExtWebSocket, message: any) {
+  const { token, role } = message;
+  jwt.verify(token, process.env.TOKEN!, (err: any, user: any) => {
+    if (err) {
+      ws.send(errorMsg("Invalid JWT token"));
+    } else {
+      ws.client_id = user.id;
+      ws.user_name = user.user_name;
+      ws.room_id = null;
+      ws.role = role;
+      ws.send(json({ type: "init-success" }));
+    }
+  });
+}
+
+async function handleCreateRoom(wss: any, ws: ExtWebSocket, message: any) {
+  const { room_id }: { room_id: string } = message;
+
+  const isOwner = isRoomOwner(ws.client_id!, room_id);
+
+  // Not quiz owner
+  if (!isOwner) {
+    ws.send(errorMsg("You can't start the quiz"));
+  }
+  // Is the quiz owner
+  else {
+    // Find if room exists
+    const room = await findRoom(room_id);
+    if (!room) {
+      const newRoom = new Room({
+        room_id: room_id,
+        owner: ws.client_id,
+        quiz_status: "published",
+      });
+      await newRoom.save();
+      ws.room_id = room_id;
+    }
+    // Room already exists
+    else {
+      ws.room_id = room_id;
+      if (room.quiz_status === "started") {
+        ws.send(json({ type: "quiz-started" }));
+      }
+      ws.send(json({ type: "player-data", players: room.players }));
+    }
+  }
+}
+
+async function handleJoinRoom(wss: any, ws: ExtWebSocket, message: any) {
+  const { room_id }: { room_id: string } = message;
+  // Find if room exists
+  const room = await findRoom(room_id);
+  // Room doesn't exist
+  if (!room) {
+    ws.send(errorMsg("Invalid room_id"));
+  } else if (room.quiz_status == "published") {
+    await addNewPlayer(room_id, ws.client_id!, ws.user_name!);
+    ws.room_id = room_id;
+    await broadcastRoom(wss, room_id);
+  } else if (room.quiz_status == "started") {
+    if (await playerInRoom(room_id, ws.client_id!)) {
+      ws.room_id = room_id;
+    } else {
+      ws.send(errorMsg("Can't join, quiz started"));
+    }
+  } else {
+    ws.send(errorMsg("Can't join, quiz ended"));
+  }
+}
+
+async function handleStartQuiz(wss: any, ws: ExtWebSocket) {
+  await startQuiz(ws.room_id!);
+
+  // Tell players that quiz started
+  await broadCastQuizStarted(wss, ws.room_id!);
+  // Tell the owner that quiz started
+  ws.send(json({ type: "quiz-started" }));
+}
