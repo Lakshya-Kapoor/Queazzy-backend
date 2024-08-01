@@ -10,7 +10,12 @@ import {
 } from "../utils/dbFunctions";
 import Room from "../models/room";
 import User from "../models/user";
-import { broadCastQuizStarted, broadcastRoom } from "../utils/broadCastUtils";
+import {
+  broadCastQuizStarted,
+  broadcastRoom,
+  sendPlayers,
+  sendPlayersAndOwner,
+} from "../utils/broadCastUtils";
 
 const handleMessage = async (wss: any, ws: ExtWebSocket, message: string) => {
   try {
@@ -100,18 +105,21 @@ async function handleCreateRoom(wss: any, ws: ExtWebSocket, message: any) {
 
 async function handleJoinRoom(wss: any, ws: ExtWebSocket, message: any) {
   const { room_id }: { room_id: string } = message;
-  // Find if room exists
   const room = await findRoom(room_id);
   // Room doesn't exist
   if (!room) {
     ws.send(errorMsg("Invalid room_id"));
   } else if (room.quiz_status == "published") {
-    await addNewPlayer(room_id, ws.client_id!, ws.user_name!);
+    const newRoom = await addNewPlayer(room_id, ws.client_id!, ws.user_name!);
     ws.room_id = room_id;
-    await broadcastRoom(wss, room_id);
+    await sendPlayersAndOwner(wss, room_id, {
+      type: "player-data",
+      players: newRoom.players,
+    });
   } else if (room.quiz_status == "started") {
     if (await playerInRoom(room_id, ws.client_id!)) {
       ws.room_id = room_id;
+      ws.send(json({ type: "quiz-started" }));
     } else {
       ws.send(errorMsg("Can't join, quiz started"));
     }
@@ -124,7 +132,7 @@ async function handleStartQuiz(wss: any, ws: ExtWebSocket) {
   await startQuiz(ws.room_id!);
 
   // Tell players that quiz started
-  await broadCastQuizStarted(wss, ws.room_id!);
+  await sendPlayers(wss, ws.room_id!, { type: "quiz-started" });
   // Tell the owner that quiz started
   ws.send(json({ type: "quiz-started" }));
 }

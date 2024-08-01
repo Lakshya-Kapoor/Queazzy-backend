@@ -33,7 +33,7 @@ router.get("/", isAuthenticated, catchAsync(getQuizzes));
 router.get(
   "/:quiz_id",
   isAuthenticated,
-  catchAsync(isQuizCreator),
+  // catchAsync(isQuizCreator),
   catchAsync(getQuiz)
 );
 

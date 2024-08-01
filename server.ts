@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { errorHandler } from "./utils/middleware";
 import quizRouter from "./routes/quizRouter";
 import userRouter from "./routes/userRouter";
+import roomRouter from "./routes/roomRouter";
 import cors from "cors";
 import handleClose from "./handlers/handleClose";
 import handleMessage from "./handlers/handleMessage";
@@ -38,6 +39,7 @@ app.use(express.urlencoded({ extended: true }));
 /* Routes */
 app.use("/user", userRouter);
 app.use("/quiz", quizRouter);
+app.use("/room", roomRouter);
 
 /* Error handling middleware */
 app.use(errorHandler);
@@ -52,7 +54,9 @@ wss.on("connection", (ws: ExtWebSocket) => {
   ws.on("error", (err) => console.log(err.message));
   ws.on("close", () => handleClose(wss, ws));
 });
+
 wss.on("error", (err) => console.log(err.message));
+
 wss.on("listening", () =>
   console.log(`Ws server is listening on PORT: ${PORT}`)
 );

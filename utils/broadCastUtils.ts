@@ -21,13 +21,50 @@ export async function broadCastQuizStarted(wss: any, room_id: string) {
   const { players } = room!;
 
   players.forEach((player) => {
-    wss.clients.forEach((client: ExtWebSocket) => {
-      if (
-        client.readyState === WebSocket.OPEN &&
-        client.client_id === player.player_id
-      ) {
-        client.send(json({ type: "quiz-started" }));
-      }
-    });
+    sendClient(wss, player.player_id, { type: "quiz-started" });
+  });
+}
+
+function sendClient(wss: any, client_id: string, message: Object) {
+  wss.clients.forEach((client: ExtWebSocket) => {
+    if (
+      client.readyState === WebSocket.OPEN &&
+      client.client_id === client_id
+    ) {
+      client.send(json(message));
+    }
+  });
+}
+
+export async function sendPlayers(wss: any, room_id: string, message: Object) {
+  const room = await Room.findOne({ room_id: room_id });
+
+  const { players } = room!;
+
+  players.forEach((player) => {
+    sendClient(wss, player.player_id, message);
+  });
+}
+
+export async function sendOwner(wss: any, room_id: string, message: Object) {
+  const room = await Room.findOne({ room_id: room_id });
+
+  const { owner } = room!;
+  sendClient(wss, owner!, message);
+}
+
+export async function sendPlayersAndOwner(
+  wss: any,
+  room_id: string,
+  message: Object
+) {
+  const room = await Room.findOne({ room_id: room_id });
+
+  const { owner, players } = room!;
+
+  sendClient(wss, owner!, message);
+
+  players.forEach((player) => {
+    sendClient(wss, player.player_id, message);
   });
 }

@@ -1,16 +1,23 @@
 import { ExtWebSocket } from "../types/cutomTypes";
 import Room from "../models/room";
 import { removePlayer } from "../utils/dbFunctions";
-import { broadcastRoom } from "../utils/broadCastUtils";
+import { sendPlayersAndOwner } from "../utils/broadCastUtils";
 
 const handleClose = async (wss: any, ws: ExtWebSocket) => {
   if (ws.role === "Player" && ws.room_id) {
     const room = await Room.findOne({ room_id: ws.room_id });
 
     if (room!.quiz_status === "published") {
-      await removePlayer(ws.room_id, ws.client_id!, ws.user_name!);
+      const newRoom = await removePlayer(
+        ws.room_id,
+        ws.client_id!,
+        ws.user_name!
+      );
 
-      broadcastRoom(wss, ws.room_id);
+      await sendPlayersAndOwner(wss, ws.room_id, {
+        type: "player-data",
+        players: newRoom.players,
+      });
     }
   }
   console.log("Client has disconnected");

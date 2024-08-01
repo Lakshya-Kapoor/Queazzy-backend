@@ -8,10 +8,13 @@ export async function addNewPlayer(
 ) {
   const newPlayer = { player_id, player_name };
 
-  await Room.findOneAndUpdate(
+  const res = await Room.findOneAndUpdate(
     { room_id: room_id },
-    { $push: { players: newPlayer } }
+    { $push: { players: newPlayer } },
+    { new: true }
   );
+
+  return res!;
 }
 
 export async function removePlayer(
@@ -21,10 +24,12 @@ export async function removePlayer(
 ) {
   const player = { player_id, player_name };
 
-  await Room.findOneAndUpdate(
+  const res = await Room.findOneAndUpdate(
     { room_id: room_id },
-    { $pull: { players: player } }
+    { $pull: { players: player } },
+    { new: true }
   );
+  return res!;
 }
 
 export async function playerInRoom(room_id: string, player_id: string) {
