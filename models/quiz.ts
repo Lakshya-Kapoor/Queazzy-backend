@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
 
 const questionSchema = new mongoose.Schema({
-  track: { type: String },
-
   question_type: {
     type: String,
     required: true,
